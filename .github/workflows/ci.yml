@@ -18,11 +18,15 @@ jobs:
       - name: Récupération du code source
         uses: actions/checkout@v4
 
+
       - name: Configuration de Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
 
       - name: Installation des dépendances Back-end
         run: |
