@@ -174,3 +174,42 @@ jobs:
               run: |
                   cd client
                   npm run build
+
+    # JOB 5 : Déploiement Continu - Publication des Images Docker
+    docker-publish:
+        name: Déploiement - Build & Push Docker Hub
+        runs-on: ubuntu-latest
+        needs: build-applications
+
+        steps:
+            - name: Récupération du code source
+              uses: actions/checkout@v4
+
+            - name: Configuration de Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Connexion à Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+            - name: Build et Push Image Back-end
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./server
+                  file: ./server/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ secrets.DOCKERHUB_USERNAME }}/orion-crm-backend:latest
+                      ${{ secrets.DOCKERHUB_USERNAME }}/orion-crm-backend:${{ github.sha }}
+
+            - name: Build et Push Image Front-end
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./client
+                  file: ./client/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ secrets.DOCKERHUB_USERNAME }}/orion-crm-frontend:latest
+                      ${{ secrets.DOCKERHUB_USERNAME }}/orion-crm-frontend:${{ github.sha }}
