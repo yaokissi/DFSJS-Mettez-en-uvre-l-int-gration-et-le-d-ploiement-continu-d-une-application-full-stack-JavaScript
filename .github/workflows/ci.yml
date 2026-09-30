@@ -69,6 +69,10 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
 
       - name: Installation des dépendances Back-end
         run: |
@@ -111,6 +115,9 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json    
 
       - name: Installation des dépendances Back-end
         run: |
