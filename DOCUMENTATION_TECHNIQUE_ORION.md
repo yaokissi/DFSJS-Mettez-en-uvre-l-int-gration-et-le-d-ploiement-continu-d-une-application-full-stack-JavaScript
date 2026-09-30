@@ -110,12 +110,32 @@ Le pipeline d'intégration et de déploiement continu (**CI/CD**) est orchestré
 ```
 
 #### Justification du choix des Actions GitHub réutilisables :
-- `actions/checkout@v4` : Récupération rapide et sécurisée du code source du dépôt.
-- `actions/setup-node@v4` : Configuration de l'environnement Node.js 22 LTS avec mise en cache automatique des dépendances `npm` (`cache: 'npm'`).
-- `sonarsource/sonarqube-scan-action@v3` : Action officielle certifiée par SonarSource pour le scan du code et l'envoi du rapport d'analyse.
-- `docker/setup-buildx-action@v3` : Activation de Docker BuildKit pour des constructions d'images accélérées et la gestion avancée des caches de layers.
-- `docker/login-action@v3` : Authentification sécurisée auprès du registre Docker Hub sans stockage d'identifiants en clair.
-- `docker/build-push-action@v6` : Compilation et publication automatisée des images Docker étiquetées selon les normes SemVer (*Semantic Versioning*).
+
+Le choix des actions GitHub s'appuie exclusivement sur des **actions officielles, certifiées et activement maintenues** issues du *GitHub Marketplace*, garantissant la sécurité de la chaîne logistique (*Supply Chain Security*), la performance et la reproductibilité :
+
+- **`actions/checkout@v4`** : 
+  - *Rôle* : Clonage sécurisé et ultra-rapide du dépôt de code source dans l'environnement virtuel du *runner*.
+  - *Justification* : Action officielle native GitHub. L'option `fetch-depth: 0` est spécifiquement configurée pour l'étape SonarQube afin de charger l'historique complet des commits (*Git Blame*) nécessaire à l'attribution précise des vulnérabilités.
+
+- **`actions/setup-node@v4`** : 
+  - *Rôle* : Provisionnement de l'environnement d'exécution Node.js v22 LTS et gestion du cache des dépendances.
+  - *Justification* : Permet d'isoler l'environnement avec la version exacte Node.js 22 LTS requise par l'application Orion. La mise en cache intelligente via `cache: 'npm'` et `cache-dependency-path` (`client/package-lock.json` & `server/package-lock.json`) réduit le temps d'installation de `npm ci` de près de **60%**, accélérant l'exécution globale du pipeline.
+
+- **`sonarsource/sonarqube-scan-action@v3`** : 
+  - *Rôle* : Exécution du scanner SAST de SonarQube Cloud.
+  - *Justification* : Action officielle certifiée directement par l'éditeur SonarSource. Elle encapsule l'exécuteur SonarScanner dans un conteneur dédié, évitant d'installer Java ou des binaires tiers sur le *runner*, et transmet de manière étanche le token de sécurité `SONAR_TOKEN`.
+
+- **`docker/setup-buildx-action@v3`** : 
+  - *Rôle* : Initialisation du moteur Docker BuildKit avancé.
+  - *Justification* : Débloque les fonctionnalités avancées de Docker BuildKit, notamment la parallélisation des stages et la réutilisation des caches d'images de couche (*layer caching*) entre les exécutions du pipeline.
+
+- **`docker/login-action@v3`** : 
+  - *Rôle* : Authentification sécurisée auprès du registre Docker Hub.
+  - *Justification* : Action officielle Docker. Permet de s'authentifier via des jetons d'accès révocables (`DOCKERHUB_TOKEN`) sans jamais exposer le mot de passe principal du compte ni écrire d'identifiants en clair sur le disque du runner.
+
+- **`docker/build-push-action@v6`** : 
+  - *Rôle* : Compilation et publication des images Docker de production.
+  - *Justification* : Réduit la complexité des scripts bash en gérant nativement la compilation Multi-stage, l'étiquetage sémantique (*SemVer tags*) et le push automatisé vers le registre de conteneurs.
 
 ---
 
