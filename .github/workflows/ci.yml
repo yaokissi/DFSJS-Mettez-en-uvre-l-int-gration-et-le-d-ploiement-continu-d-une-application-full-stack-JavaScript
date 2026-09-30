@@ -1,0 +1,134 @@
+name: Orion CRM - Continuous Integration (CI)
+
+# Déclenchement automatique du pipeline
+on:
+  push:
+    branches: [ main, develop, '**']
+  pull_request:
+    branches: [ main, develop, '**']
+
+jobs:
+
+  # JOB 1 : Vérification de la Qualité du Code (Lint & Typecheck)
+  lint-and-typecheck:
+    name: Lint & Typecheck (Client & Server)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupération du code source
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Installation des dépendances Back-end
+        run: |
+          cd server
+          npm ci
+
+      - name: Installation des dépendances Front-end
+        run: |
+          cd client
+          npm ci
+
+      - name: Vérification ESLint Back-end
+        run: |
+          cd server
+          npm run lint
+
+      - name: Vérification ESLint Front-end
+        run: |
+          cd client
+          npm run lint
+
+      - name: Vérification des types TypeScript Front-end
+        run: |
+          cd client
+          npm run typecheck
+
+
+  # JOB 2 : Exécution des Tests Unitaires & d'Intégration
+  unit-testing:
+    name: Tests Unitaires (Vitest)
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+
+    steps:
+      - name: Récupération du code source
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Installation des dépendances Back-end
+        run: |
+          cd server
+          npm ci
+
+      - name: Installation des dépendances Front-end
+        run: |
+          cd client
+          npm ci
+
+      - name: Génération du client Prisma
+        run: |
+          cd server
+          npx prisma generate
+
+      - name: Exécution des tests Back-end
+        run: |
+          cd server
+          npx vitest run
+
+      - name: Exécution des tests Front-end
+        run: |
+          cd client
+          npx vitest run
+
+  # JOB 3 : Compilation des Artefacts (Builds)
+ 
+  build-applications:
+    name: Build (Front & Back)
+    runs-on: ubuntu-latest
+    needs: unit-testing
+
+    steps:
+      - name: Récupération du code source
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Installation des dépendances Back-end
+        run: |
+          cd server
+          npm ci
+
+      - name: Installation des dépendances Front-end
+        run: |
+          cd client
+          npm ci
+
+      - name: Génération du client Prisma
+        run: |
+          cd server
+          npx prisma generate
+
+      - name: Build du Back-end (TypeScript -> JS)
+        run: |
+          cd server
+          npm run build
+
+      - name: Build du Front-end (Vite)
+        run: |
+          cd client
+          npm run build
