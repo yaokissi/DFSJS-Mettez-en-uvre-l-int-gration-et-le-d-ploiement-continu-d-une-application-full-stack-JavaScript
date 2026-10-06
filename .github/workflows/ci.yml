@@ -34,12 +34,12 @@ jobs:
             - name: Installation des dépendances Back-end
               run: |
                   cd server
-                  npm ci
+                  npm ci --ignore-scripts
 
             - name: Installation des dépendances Front-end
               run: |
                   cd client
-                  npm ci
+                  npm ci --ignore-scripts
 
             - name: Génération du client Prisma
               run: |
@@ -127,12 +127,12 @@ jobs:
             - name: Installation des dépendances Back-end
               run: |
                   cd server
-                  npm ci
+                  npm ci --ignore-scripts
 
             - name: Installation des dépendances Front-end
               run: |
                   cd client
-                  npm ci
+                  npm ci --ignore-scripts
 
             - name: Génération du client Prisma
               run: |
