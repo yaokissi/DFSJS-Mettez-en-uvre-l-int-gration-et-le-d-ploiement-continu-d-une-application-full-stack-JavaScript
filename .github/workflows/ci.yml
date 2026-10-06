@@ -13,7 +13,7 @@ on:
 
 jobs:  
 
-    # JOB 1 : Exécution des Tests Unitaires & couverture de code (vitest)
+    # JOB 1 : Exécution des Tests Unitaires & couverture de code avec vitest
     unit-testing:
         name: Tests Unitaires & couverture de code (vitest)
         runs-on: ubuntu-latest
