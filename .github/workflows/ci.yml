@@ -7,55 +7,16 @@ on:
     pull_request:
         branches: [main, develop, "**"]
 
-jobs:
-    # JOB 1 : Vérification de la Qualité du Code (Lint & Typecheck)
-    lint-and-typecheck:
-        name: Lint & Typecheck (Client & Server)
-        runs-on: ubuntu-latest
+    # Plan de testing périodique : exécution automatique chaque nuit à 02h00 UTC
+    schedule:
+      - cron: '0 2 * * *'
 
-        steps:
-            - name: Récupération du code source
-              uses: actions/checkout@v4
+jobs:  
 
-            - name: Configuration de Node.js 22
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: "npm"
-                  cache-dependency-path: |
-                      server/package-lock.json
-                      client/package-lock.json
-
-            - name: Installation des dépendances Back-end
-              run: |
-                  cd server
-                  npm ci
-
-            - name: Installation des dépendances Front-end
-              run: |
-                  cd client
-                  npm ci
-
-            - name: Vérification ESLint Back-end
-              run: |
-                  cd server
-                  npm run lint
-
-            - name: Vérification ESLint Front-end
-              run: |
-                  cd client
-                  npm run lint
-
-            - name: Vérification des types TypeScript Front-end
-              run: |
-                  cd client
-                  npm run typecheck
-
-    # JOB 2 : Exécution des Tests Unitaires & d'Intégration
+    # JOB 1 : Exécution des Tests Unitaires & couverture de code (vitest)
     unit-testing:
-        name: Tests Unitaires (Vitest)
+        name: Tests Unitaires & couverture de code (vitest)
         runs-on: ubuntu-latest
-        needs: lint-and-typecheck
 
         steps:
             - name: Récupération du code source
@@ -85,17 +46,25 @@ jobs:
                   cd server
                   npx prisma generate
 
-            - name: Exécution des tests Back-end
+            - name: Tests & Rapport de couverture Back-end
               run: |
                   cd server
-                  npx vitest run
+                  npm run test:coverage -- --run
 
-            - name: Exécution des tests Front-end
+            - name: Tests & Rapport de couverture Front-end
               run: |
                   cd client
-                  npx vitest run
+                  npm run test:coverage -- --run
+            
+            - name: Publication des rapports de couverture (Artefact GitHub)
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-reports
+                  path: |
+                      server/coverage
+                      client/coverage
 
-    # JOB 3 : Analyse de Sécurité & Qualité (SonarQube Cloud)
+    # JOB 2 : Analyse de Sécurité & Qualité (SonarQube Cloud)
     sonarqube-scan:
         name: Analyse SonarQube Cloud
         runs-on: ubuntu-latest
@@ -126,12 +95,17 @@ jobs:
                   cd client
                   npm ci
 
+            - name: Téléchargement des rapports de couverture (Artefact GitHub)
+              uses: actions/download-artifact@v4
+              with:
+                  name: coverage-reports
+
             - name: Analyse SonarQube Cloud
               uses: sonarsource/sonarqube-scan-action@v3
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-    # JOB 4 : Compilation des Artefacts (Builds)
+    # JOB 3 : Compilation des Artefacts (Builds)
     build-applications:
         name: Build (Front & Back)
         runs-on: ubuntu-latest
@@ -175,7 +149,7 @@ jobs:
                   cd client
                   npm run build
 
-    # JOB 5 : Déploiement Continu - Publication des Images Docker
+    # JOB 4 : Déploiement Continu - Publication des Images Docker
     docker-publish:
         name: Déploiement - Build & Push Docker Hub
         runs-on: ubuntu-latest

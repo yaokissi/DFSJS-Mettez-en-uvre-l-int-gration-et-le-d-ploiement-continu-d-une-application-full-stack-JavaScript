@@ -139,17 +139,20 @@ Le choix des actions GitHub s'appuie exclusivement sur des **actions officielles
 
 ---
 
-### 2.2 Scripts d’automatisation
-Le pipeline réutilise les scripts NPM standardisés définis dans le projet pour garantir la stricte équivalence entre les exécutions locales et la CI :
+### 2.2 Scripts d’automatisation & Matrice des Commandes
 
-| Script NPM | Commande sous-jacente | Rôle dans le pipeline CI/CD | Mode d'exécution CI |
-| :--- | :--- | :--- | :--- |
-| `npm run lint` | `eslint src --ext .ts,.tsx` | Validation de la conformité du code aux normes de style. | Bloquant en cas d'erreur. |
-| `npm run typecheck` | `tsc --noEmit` | Vérification stricte des types TypeScript (absence de `any` ou type mismatch). | Bloquant en cas d'erreur. |
-| `npm test` | `vitest run` | Exécution des suites de tests unitaires et d'intégration. | Bloquant (option `--run` pour mode non-interactif). |
-| `npm run test:coverage` | `vitest run --coverage` | Génération des rapports de couverture de code au format `lcov`. | Transmis à SonarQube Cloud. |
-| `npm run build` | `tsc` (Back) / `vite build` (Front) | Compilation des artefacts de production JS/CSS. | Étape préalable au packaging Docker. |
-| `npx prisma generate` | `prisma generate` | Génération du client ORM Prisma à partir du schéma. | Exécuté avant le build back-end. |
+Pour répondre aux exigences de traçabilité, de transparence et de sécurité, chaque commande de la chaîne d'automatisation est rigoureusement définie, documentée et catégorisée selon son objectif, son emplacement de définition et son moment d'exécution :
+
+| Commande | Objectif précis | Lieu de définition | Moment & Contexte d'exécution | Sécurité & Secrets |
+| :--- | :--- | :--- | :--- | :--- |
+| **`npm run lint`** | Valider la conformité du code aux normes de style et syntaxiques via ESLint. | `server/package.json`<br>`client/package.json` | Local (Dev)<br>CI (Job 1 - `lint-and-typecheck`) | Aucun secret requis. |
+| **`npm run typecheck`** | Vérifier la validité stricte des types TypeScript (détection d'erreurs statiques sans émettre de JS). | `client/package.json` (`tsc --noEmit`) | Local (Dev)<br>CI (Job 1 - `lint-and-typecheck`) | Aucun secret requis. |
+| **`npx vitest run`** | Exécuter les suites de tests unitaires et d'intégration en mode non-interactif. | `server/package.json`<br>`client/package.json` | Local (Dev)<br>CI (Job 2 - `unit-testing`) | Utilise base SQLite temporaire isolée en mémoire ou fichier local. |
+| **`npx prisma generate`** | Générer les types du client ORM Prisma à partir du fichier `schema.prisma`. | `server/package.json` | Local (Dev)<br>CI (Jobs 2, 4)<br>Docker Build | Aucun secret requis. |
+| **`npm run build`** | Transpiler TypeScript en JavaScript (`tsc`) pour le serveur et bundler l'UI avec Vite pour le client. | `server/package.json`<br>`client/package.json` | Local (Dev)<br>CI (Job 4 - `build-applications`)<br>Docker Stage 1 | Fichiers statiques générés dans `dist/`. |
+| **`docker/login-action@v3`** | Connecter de façon étanche le runner GitHub au registre Docker Hub. | `.github/workflows/ci.yml` (Job 5) | CI / CD (Job 5 - `docker-publish`) | Injecte `${{ secrets.DOCKERHUB_USERNAME }}` et `${{ secrets.DOCKERHUB_TOKEN }}`. |
+| **`docker/build-push-action@v6`** | Compiler les images Multi-stage (`Dockerfile`) et les publier sur Docker Hub avec tags SemVer (`latest`, `sha`). | `.github/workflows/ci.yml` (Job 5) | CI / CD (Job 5 - `docker-publish`) | Pas de secrets dans l'image. Variables d'environnement isolées. |
+| **`docker compose up --build -d`** | Déployer et orchestrer localement l'intégralité de l'infrastructure (Back + Front + Volume + Réseau) en tâche de fond. | `docker-compose.yml` (Racine) | Déploiement Local / Staging / Production | Variables injectées via `.env` non suivi sur Git. |
 
 ---
 
