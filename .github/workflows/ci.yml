@@ -50,11 +50,13 @@ jobs:
               run: |
                   cd server
                   npm run test:coverage -- --run
+                  sed -i 's#SF:src/#SF:server/src/#g' coverage/lcov.info
 
             - name: Tests & Rapport de couverture Front-end
               run: |
                   cd client
                   npm run test:coverage -- --run
+                  sed -i 's#SF:src/#SF:client/src/#g' coverage/lcov.info
             
             - name: Publication du rapport de couverture Back-end
               uses: actions/upload-artifact@v4
