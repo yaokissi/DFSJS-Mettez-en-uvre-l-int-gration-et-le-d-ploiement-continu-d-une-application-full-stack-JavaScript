@@ -11,7 +11,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Installation de toutes les dépendances (dev + prod)
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Copie du code source
 COPY . .
@@ -36,7 +36,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Installation des dépendances de production et génération du client Prisma
-RUN npm ci --only=production
+RUN npm ci --only=production --ignore-scripts
 RUN npx prisma generate
 
 # Copie des artefacts compilés depuis le stage builder
