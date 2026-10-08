@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import organizationRoutes from './routes/organizationRoutes';
 import contactRoutes from './routes/contactRoutes';
+import logger from './utils/logger';
+
 
 dotenv.config();
 
@@ -12,6 +14,17 @@ const PORT = process.env.PORT || 8080;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+
+// Middleware de logging pour chaque requête HTTP
+app.use((req, _res, next) => {
+  logger.info(`HTTP ${req.method} ${req.url}`, {
+    method: req.method,
+    url: req.url,
+    ip: req.ip
+  });
+  next();
+});
 
 // Routes
 app.get('/api/health', (_req: Request, res: Response) => {

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: orion-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m # Limite la mémoire RAM à 512 Mo pour éviter de ramer en local
+      - xpack.security.enabled=false   # Désactive la sécurité locale pour simplifier les tests
+    ports:
+      - "9200:9200"
+    networks:
+      - elk-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: orion-logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "5044:5044/tcp"
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    networks:
+      - elk-network
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: orion-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - elk-network
+    depends_on:
+      - elasticsearch
+
+networks:
+  elk-network:
+    driver: bridge
