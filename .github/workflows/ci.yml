@@ -10,6 +10,7 @@ on:
     # Plan de testing périodique : exécution automatique chaque nuit à 02h00 UTC
     schedule:
       - cron: '0 2 * * *'
+    workflow_dispatch: {}
 
 jobs:  
 
