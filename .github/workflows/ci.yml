@@ -3,13 +3,15 @@ name: Orion CRM - Continuous Integration (CI)
 # Déclenchement automatique du pipeline
 on:
     push:
-        branches: [main, develop, "**"]
+        branches: [main, develop,'**' ]
     pull_request:
-        branches: [main, develop, "**"]
+        branches: [main, develop]
 
     # Plan de testing périodique : exécution automatique chaque nuit à 02h00 UTC
     schedule:
       - cron: '0 2 * * *'
+
+    # Déclenchement manuel depuis l'interface GitHub
     workflow_dispatch: {}
 
 jobs:  
