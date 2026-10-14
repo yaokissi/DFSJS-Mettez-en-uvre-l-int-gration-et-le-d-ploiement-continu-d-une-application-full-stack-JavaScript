@@ -12,6 +12,7 @@ services:
       - PORT=8080
       - NODE_ENV=production
       - DATABASE_URL=file:./dev.db
+      - LOGSTASH_HOST=host.docker.internal
     volumes:
       - sqlite-data:/app/prisma
     networks:
