@@ -1,10 +1,14 @@
 import winston from 'winston';
 import net from 'net';
 
+
+//  Récupère l'hôte de Logstash (par exemple 'host.docker.internal' dans Docker, ou 'localhost' sur le Mac)
+const LOGSTASH_HOST = process.env.LOGSTASH_HOST || 'localhost';
+const LOGSTASH_PORT = Number(process.env.LOGSTASH_PORT) || 5044;
 // Transport personnalisé vers Logstash en TCP
 const sendToLogstash = (logObject: object) => {
   const client = new net.Socket();
-  client.connect(5044, 'localhost', () => {
+  client.connect(LOGSTASH_PORT, LOGSTASH_HOST, () => {
     client.write(JSON.stringify(logObject) + '\n');
     client.end();
   });
