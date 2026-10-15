@@ -17,11 +17,14 @@ app.use(express.json());
 
 
 // Middleware de logging pour chaque requête HTTP
-app.use((req, _res, next) => {
-  logger.info(`HTTP ${req.method} ${req.url}`, {
-    method: req.method,
-    url: req.url,
-    ip: req.ip
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    logger.info(`HTTP ${req.method} ${req.url}`, {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      ip: req.ip
+    });
   });
   next();
 });
