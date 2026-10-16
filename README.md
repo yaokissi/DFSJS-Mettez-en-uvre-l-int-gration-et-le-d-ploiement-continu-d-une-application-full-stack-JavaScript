@@ -1,210 +1,252 @@
 # Orion CRM
 
-A simplified Customer Relationship Management (CRM) application built with the MERN stack (modernized with TypeScript, Vite, and Prisma).
+A full-stack Customer Relationship Management (CRM) application built with React, Node.js, Express, and Prisma. The project includes automated CI/CD pipelines, multi-stage Docker containerization, and centralized logging powered by an ELK stack.
 
 ## Architecture
 
-This project follows a monorepo structure with separate frontend and backend applications:
+This project is organized as a monorepo comprising frontend, backend, containerization, and observability configurations:
 
-- **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Node.js 22 + Express 5 + TypeScript + Prisma
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, Zustand, Axios
+- **Backend**: Node.js 22 LTS, Express 5, TypeScript, Prisma ORM, SQLite, Winston
+- **Containerization**: Multi-stage Docker builds on Alpine Linux orchestrated via Docker Compose
+- **Observability**: Centralized log aggregation with Elasticsearch, Logstash, and Kibana (ELK Stack)
+- **CI/CD Pipeline**: GitHub Actions workflow automating dependency audits, unit tests, code coverage, SonarQube Cloud quality gates, Trivy container security scans, and Docker Hub image publication
 
 ## Prerequisites
 
 - **Node.js** >= 22.0.0
 - **npm** >= 10.0.0
+- **Docker Engine** and **Docker Compose** (v2.x or later)
 
-## Installation
+---
 
-### 1. Clone the repository
+## Running with Docker (Recommended)
+
+Docker Compose starts the entire stack, including the frontend, backend, SQLite persistent storage, and the ELK logging infrastructure.
+
+### 1. Start all services
+
+From the project root directory, run:
 
 ```bash
-git clone <repository-url>
-cd p7-dfsjs
+docker compose up --build -d
 ```
 
-### 2. Install backend dependencies
+This command builds the multi-stage images for frontend and backend, sets up the dedicated bridge networks, mounts the persistent SQLite volume (`sqlite-data`), and starts the ELK containers.
+
+### 2. Access the services
+
+Once the containers are running, the services are accessible at the following URLs:
+
+- **Frontend Application**: `http://localhost` (Port 80)
+- **Backend REST API**: `http://localhost:8080`
+- **Kibana (Log Dashboards)**: `http://localhost:5601`
+- **Elasticsearch API**: `http://localhost:9200`
+
+### 3. View container logs
+
+To inspect logs in real time from the running backend:
+
+```bash
+docker compose logs -f backend
+```
+
+To view logs across all services:
+
+```bash
+docker compose logs -f
+```
+
+### 4. Stop the services
+
+To stop and remove containers and networks:
+
+```bash
+docker compose down
+```
+
+To stop containers and reset the persistent SQLite database volume:
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Running Locally (Development Mode)
+
+If you prefer to run the applications directly on your host machine without Docker:
+
+### 1. Backend Setup
 
 ```bash
 cd server
+
+# Install dependencies
 npm install
-```
 
-### 3. Configure environment variables
-
-```bash
+# Configure environment variables
 cp .env.example .env
-```
 
-Edit `.env` if needed (default values should work for local development).
-
-### 4. Initialize the database
-
-```bash
+# Generate Prisma client and run migrations
 npx prisma generate
 npx prisma migrate dev --name init
-```
 
-### 5. Install frontend dependencies
-
-```bash
-cd ../client
-npm install
-```
-
-### 6. Configure frontend environment
-
-```bash
-cp .env.example .env
-```
-
-## Running the Application
-
-### Start the backend server
-
-```bash
-cd server
+# Start development server with live reload
 npm run dev
 ```
 
-The API will be available at `http://localhost:8080`
+The API will be available at `http://localhost:8080`.
 
-### Start the frontend application
+### 2. Frontend Setup
 
-In a new terminal:
+In a separate terminal:
 
 ```bash
 cd client
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env
+
+# Start development server
 npm run dev
 ```
 
-The application will be available at `http://localhost:4200`
+The application will be available at `http://localhost:4200` (or the port specified in Vite output).
+
+---
+
+## Centralized Logging (ELK Stack)
+
+The backend uses a structured logger configured with Winston (`server/src/utils/logger.ts`) that outputs log entries in JSON format.
+
+When running via Docker Compose:
+1. HTTP requests and application events are logged with timestamp, log level, HTTP method, URL, and status code.
+2. Logs are forwarded to Logstash listening on port `5044/tcp`.
+3. Logstash parses and indexes the events into Elasticsearch under the index prefix `orion-logs-*`.
+4. Visualizations and search queries can be performed inside Kibana at `http://localhost:5601`.
+
+---
 
 ## Available Scripts
 
-### Backend (server/)
+### Backend (`server/`)
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm test` - Run tests
-- `npm run lint` - Lint code
-- `npm run prisma:generate` - Generate Prisma client
-- `npm run prisma:migrate` - Run database migrations
-- `npm run prisma:studio` - Open Prisma Studio (database GUI)
+- `npm run dev`: Start development server with hot reload via `tsx watch`
+- `npm run build`: Compile TypeScript source code into JavaScript (`tsc`)
+- `npm start`: Execute production build (`node dist/index.js`)
+- `npm test`: Run test suites using Vitest
+- `npm run test:coverage`: Run test suites and generate V8 coverage reports
+- `npm run lint`: Check code quality and style using ESLint
+- `npm run prisma:generate`: Generate Prisma Client types from `schema.prisma`
+- `npm run prisma:migrate`: Apply database migrations in development
+- `npm run prisma:studio`: Open Prisma Studio database management GUI
 
-### Frontend (client/)
+### Frontend (`client/`)
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm test` - Run tests
-- `npm run lint` - Lint code
+- `npm run dev`: Start Vite development server
+- `npm run build`: Compile and bundle frontend assets for production
+- `npm run preview`: Serve the production build locally for verification
+- `npm test`: Run frontend unit and component tests with Vitest
+- `npm run test:coverage`: Generate frontend test coverage reports
+- `npm run lint`: Check frontend code style using ESLint
+- `npm run typecheck`: Run TypeScript compiler check without emitting files (`tsc --noEmit`)
+
+---
+
+## CI/CD Pipeline & Quality Gates
+
+The repository includes an automated GitHub Actions pipeline (`.github/workflows/ci.yml`) triggered on pushes, pull requests, nightly schedules, and manual triggers:
+
+1. **Dependency Audit**: Runs `npm audit` on both client and server packages to flag known vulnerabilities.
+2. **Unit Testing & Coverage**: Executes Vitest test suites, enforces coverage thresholds, and uploads coverage artifacts.
+3. **Static Analysis & Security (SonarQube Cloud)**: Performs automated code analysis, reporting code smells, security hotspots, and enforcing the Quality Gate.
+4. **Compilation Verification**: Validates production builds for both backend (`tsc`) and frontend (`vite build`).
+5. **Container Security Scan (Trivy)**: Scans generated Docker images for high and critical OS/package vulnerabilities before publication.
+6. **Container Publication (Docker Hub)**: Builds and pushes production-ready multi-stage Docker images tagged with both the commit SHA and `latest`.
+
+To protect the software supply chain, third-party GitHub Actions are pinned to explicit commit SHAs rather than mutable tags.
+
+---
 
 ## Project Structure
 
 ```
-p7-dfsjs-starter/
-├── client/                 # Frontend React application
+.
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions CI/CD pipeline
+├── client/                      # Frontend React application
 │   ├── src/
-│   │   ├── components/    # Reusable React components
-│   │   ├── pages/         # Page components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── services/      # API client services
-│   │   ├── types/         # TypeScript type definitions
-│   │   ├── App.tsx        # Main App component
-│   │   └── main.tsx       # Application entry point
-│   ├── public/
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── Dockerfile
-├── server/                # Backend Express application
-│   ├── src/
-│   │   ├── controllers/   # Route handlers (HTTP layer)
-│   │   ├── services/      # Business logic layer
-│   │   ├── repositories/  # Data access layer
-│   │   ├── models/        # Data models and schemas
-│   │   ├── routes/        # API route definitions
-│   │   └── index.ts       # Server entry point
-│   ├── prisma/
-│   │   └── schema.prisma  # Database schema
+│   │   ├── components/          # Reusable UI components
+│   │   ├── pages/               # Application page views
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── services/            # API client layer
+│   │   ├── types/               # TypeScript definitions
+│   │   ├── App.tsx              # Root component
+│   │   └── main.tsx             # Frontend entry point
+│   ├── Dockerfile               # Multi-stage production build (Vite + Nginx)
+│   ├── nginx.conf               # Nginx reverse proxy / SPA configuration
 │   ├── package.json
 │   ├── tsconfig.json
-│   └── Dockerfile
+│   └── vite.config.ts
+├── server/                      # Backend Express application
+│   ├── src/
+│   │   ├── controllers/         # HTTP request handlers
+│   │   ├── services/            # Business logic
+│   │   ├── repositories/        # Database access layer (Prisma)
+│   │   ├── models/              # Zod validation schemas and types
+│   │   ├── routes/              # Express route declarations
+│   │   ├── utils/               # Structured Winston logger
+│   │   └── index.ts             # Application entry point
+│   ├── prisma/
+│   │   ├── schema.prisma        # Database models and relations
+│   │   └── dev.db               # SQLite database file (local dev)
+│   ├── Dockerfile               # Multi-stage production build (Node.js Alpine)
+│   ├── package.json
+│   └── tsconfig.json
+├── docker-compose.yml           # Core application orchestration
+├── docker-compose-elk.yml       # Elasticsearch, Logstash, Kibana stack
+├── logstash.conf                # Logstash pipeline configuration
+├── sonar-project.properties     # SonarQube Cloud scanner configuration
 └── README.md
 ```
 
-## Features
+---
 
-- **Dashboard**: View statistics and overview
-- **Contacts Management**: Create, read, update, and delete contacts
-- **Organizations Management**: Manage companies and link them to contacts
-- **RESTful API**: Well-structured backend with Controller-Service-Repository pattern
-- **Type Safety**: Full TypeScript support on frontend and backend
-- **Modern UI**: Tailwind CSS with responsive design
-
-## API Endpoints
+## REST API Endpoints
 
 ### Organizations
 
-- `GET /api/organizations` - Get all organizations
-- `GET /api/organizations/:id` - Get organization by ID
-- `POST /api/organizations` - Create new organization
-- `PUT /api/organizations/:id` - Update organization
-- `DELETE /api/organizations/:id` - Delete organization
-- `GET /api/organizations/stats` - Get organization statistics
+- `GET /api/organizations` - Retrieve all organizations
+- `GET /api/organizations/:id` - Retrieve organization by ID
+- `POST /api/organizations` - Create a new organization
+- `PUT /api/organizations/:id` - Update an existing organization
+- `DELETE /api/organizations/:id` - Delete an organization
+- `GET /api/organizations/stats` - Retrieve organization statistics
 
 ### Contacts
 
-- `GET /api/contacts` - Get all contacts
-- `GET /api/contacts/:id` - Get contact by ID
-- `POST /api/contacts` - Create new contact
-- `PUT /api/contacts/:id` - Update contact
-- `DELETE /api/contacts/:id` - Delete contact
-- `GET /api/contacts/stats` - Get contact statistics
+- `GET /api/contacts` - Retrieve all contacts
+- `GET /api/contacts/:id` - Retrieve contact by ID
+- `POST /api/contacts` - Create a new contact
+- `PUT /api/contacts/:id` - Update an existing contact
+- `DELETE /api/contacts/:id` - Delete a contact
+- `GET /api/contacts/stats` - Retrieve contact statistics
 
-## Technology Stack
-
-### Frontend
-
-- **React 19**: Modern React with Hooks
-- **TypeScript 5.x**: Static typing
-- **Vite**: Fast build tool
-- **Tailwind CSS**: Utility-first CSS framework
-- **TanStack Query**: Data fetching and caching
-- **Axios**: HTTP client
-- **React Router**: Client-side routing
-- **Zustand**: Lightweight state management
-
-### Backend
-
-- **Node.js 22 LTS**: JavaScript runtime
-- **Express 5**: Web framework
-- **TypeScript 5.x**: Static typing
-- **Prisma**: Modern ORM
-- **SQLite**: Development database
-- **Zod**: Runtime type validation
-- **Vitest**: Testing framework
+---
 
 ## Development Guidelines
 
-### Code Style
-
-- Use **TypeScript strict mode**
-- No `any` types allowed
-- Use **functional components** and hooks (no class components)
-- Use `async/await` for asynchronous operations (no callbacks)
-- Follow the **Controller-Service-Repository** pattern on the backend
-
-### Architecture Principles
-
-- **Separation of Concerns**: Clear separation between UI, business logic, and data access
-- **Type Safety**: Define interfaces/types for all data structures
-- **Custom Hooks**: Extract complex logic into reusable hooks
-- **API Layer**: Centralized API calls in service files
-- **Validation**: Use Zod schemas for input validation
+- **TypeScript Strict Mode**: No implicit `any` types; all models and payloads must be typed.
+- **Architectural Separation**: Strict adherence to the Controller-Service-Repository pattern on the backend.
+- **Validation**: Runtime validation of request bodies using Zod schemas.
+- **Components**: Functional React components with hooks, TanStack Query for data fetching, and Zustand for global UI state.
+- **Non-Root Containers**: Docker images run under unprivileged user accounts (`node` user) to follow security best practices.
 
 ## License
 
-MIT
+This project is licensed under the MIT License.
